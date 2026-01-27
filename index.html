@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cronograma</title>
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="foto2.png">
+
+<meta name="theme-color" content="#fefae0">
+
+<link rel="icon" type="image/png" href="foto2.png">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --musgo-profundo: #3A412E;
+            --verde-oliva: #606C38;
+            --verde-vivo: #8db51b;
+            --ocre: #BC6C25;
+            --terracota: #A44A3F;
+            --areia: #FEFAE0;
+            --pedra: #DDA15E;
+            --texto-cor: #283618;
+            --texto-secundario: #606C38;
+            --borda: #ADC178;
+            --overlay: rgba(58, 65, 46, 0.4);
+            --shadow: 0 8px 24px rgba(40, 54, 24, 0.15);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        body { background-color: var(--areia); height: 100vh; overflow: hidden; display: flex; justify-content: center; align-items: center; color: var(--texto-cor); }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        .balao-principal {
+            width: 92%; max-width: 400px; height: 90vh;
+            background-color: #fff; padding: 25px 15px;
+            border-radius: 24px; box-shadow: var(--shadow);
+            border: 1px solid var(--borda); display: flex; flex-direction: column;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        h1 { color: var(--musgo-profundo); text-align: center; font-size: 1.6rem; margin-bottom: 20px; letter-spacing: -0.5px; }
+        h1 span { color: var(--verde-vivo); }
+
+        .nav-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        
+        .mes-wrapper { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            width: 180px; 
+            margin: 0 auto;
+            position: relative;
+        }
+        
+        .nav-label { font-weight: 600; font-size: 0.85rem; color: var(--verde-oliva); text-align: center; }
+        .label-semana { flex-grow: 1; }
+        
+        .seta { width: 0; height: 0; border-top: 8px solid transparent; border-bottom: 8px solid transparent; cursor: pointer; transition: transform 0.2s; flex-shrink: 0; }
+        .seta:active { transform: scale(0.8); }
+        .seta-esq { border-right: 12px solid var(--musgo-profundo); }
+        .seta-dir { border-left: 12px solid var(--musgo-profundo); }
+        
+        .divisor { width: 100%; height: 1px; background-color: var(--pedra); opacity: 0.3; margin-bottom: 15px; }
+
+        .lista-dias { flex-grow: 1; overflow-y: auto; padding-right: 5px; }
+        .dia-card { 
+            background: #fff; border: 1px solid var(--pedra); border-radius: 16px; 
+            margin-bottom: 12px; padding: 18px; display: flex; justify-content: space-between; align-items: center;
+            transition: all 0.2s; cursor: pointer;
+        }
+        .dia-card:hover { border-color: var(--ocre); background-color: #fffcf2; }
+        .dia-card:active { transform: scale(0.98); }
+        
+        .dia-atual { border: 2px solid var(--terracota) !important; box-shadow: 0 4px 12px rgba(164, 74, 63, 0.15); }
+
+        .dia-info h3 { font-size: 0.95rem; color: var(--musgo-profundo); }
+        .dia-info span { font-size: 0.75rem; color: var(--ocre); display: block; margin-top: 2px; }
+        
+        .ver-btn { 
+            background: var(--musgo-profundo); color: #fff; 
+            padding: 8px 16px; border-radius: 10px; font-size: 0.7rem; 
+            font-weight: 600; cursor: pointer; border: none; transition: background 0.2s;
+        }
+        .ver-btn:hover { background: var(--verde-oliva); }
+
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--overlay); backdrop-filter: blur(8px);
+            display: none; justify-content: center; align-items: center; z-index: 10;
+        }
+
+        .modal-content {
+            background: #fff; width: 92%; max-width: 400px; height: 85vh;
+            border-radius: 24px; padding: 20px; position: relative;
+            display: flex; flex-direction: column; animation: slideIn 0.3s ease-out;
+        }
+
+        .btn-fechar { 
+            position: absolute; top: 15px; left: 15px; 
+            font-size: 0.65rem; font-weight: 600; cursor: pointer; 
+            color: var(--musgo-profundo); padding: 6px 12px; 
+            border: 1.5px solid var(--musgo-profundo); border-radius: 8px;
+            transition: all 0.2s; background: transparent;
+        }
+        .btn-fechar:hover { background: var(--musgo-profundo); color: #fff; }
+        
+        .titulo-dia { text-align: center; margin-bottom: 20px; color: var(--musgo-profundo); font-size: 1.3rem; margin-top: 25px; }
+
+        .periodo-header { 
+            font-size: 0.7rem; font-weight: 600; color: var(--ocre); 
+            text-transform: uppercase; letter-spacing: 1px; 
+            margin: 15px 0 10px 5px; display: flex; align-items: center;
+        }
+        .periodo-header::after { content: ''; flex-grow: 1; height: 1px; background: var(--pedra); opacity: 0.4; margin-left: 10px; }
+
+        .tarefa-card { 
+            display: flex; align-items: center; background: #fff; border: 1px solid #eee; 
+            padding: 12px; border-radius: 14px; margin-bottom: 8px; border-left: 6px solid #ccc;
+            transition: transform 0.2s;
+        }
+        .chk { width: 22px; height: 22px; border: 2.5px solid var(--verde-oliva); border-radius: 7px; margin-right: 12px; cursor: pointer; flex-shrink: 0; position: relative; }
+        .tarefa-txt { flex-grow: 1; font-size: 0.82rem; }
+        .tarefa-txt strong { display: block; font-size: 0.7rem; text-transform: uppercase; margin-bottom: 2px; }
+        .btn-del { color: var(--terracota); font-weight: bold; cursor: pointer; padding: 5px; font-size: 1.2rem; transition: transform 0.2s; }
+        .btn-del:hover { transform: scale(1.2); }
+
+        .concluida { opacity: 0.5; filter: grayscale(0.5); }
+        .concluida .chk { background: var(--verde-oliva); border-color: var(--verde-oliva); }
+        .concluida .chk::after { content: ''; position: absolute; top: 15%; left: 45%; width: 2px; height: 70%; background: #fff; transform: rotate(45deg); }
+
+        .btn-acao { 
+            width: 100%; padding: 14px; border-radius: 14px; border: none; 
+            background: var(--musgo-profundo); color: white; font-weight: 600; 
+            cursor: pointer; margin-top: 10px; transition: all 0.2s; box-shadow: 0 4px 12px rgba(58, 65, 46, 0.2);
+        }
+        .btn-acao:hover { background: var(--verde-oliva); transform: translateY(-2px); }
+        .btn-acao:active { transform: translateY(0); }
+
+        .form-balao { background: white; padding: 25px; border-radius: 24px; width: 85%; max-width: 350px; animation: slideIn 0.3s ease-out; }
+        select, input { width: 100%; padding: 12px; margin-bottom: 12px; border: 1.5px solid var(--pedra); border-radius: 10px; background: #fff; color: var(--texto-cor); outline: none; transition: border-color 0.2s; }
+        select:focus, input:focus { border-color: var(--ocre); }
+
+        .ofuscado { filter: blur(4px); pointer-events: none; transition: filter 0.3s; }
+    </style>
+</head>
+<body>
+
+    <div class="balao-principal" id="pagPrincipal">
+        <h1>Crono<span>grama</span></h1>
+        <div class="nav-container">
+            <div class="mes-wrapper">
+                <div class="seta seta-esq" onclick="mudarMes(-1)"></div>
+                <div class="nav-label" id="nomeMes" style="flex-grow:1;"></div>
+                <div class="seta seta-dir" onclick="mudarMes(1)"></div>
+            </div>
+        </div>
+        <div class="nav-container">
+            <div class="seta seta-esq" onclick="mudarSemana(-1)"></div>
+            <div class="nav-label label-semana" id="labelSemana"></div>
+            <div class="seta seta-dir" onclick="mudarSemana(1)"></div>
+        </div>
+        <div class="divisor"></div>
+        <div class="lista-dias" id="listaDias"></div>
+    </div>
+
+    <div class="modal" id="modalDia">
+        <div class="modal-content">
+            <button class="btn-fechar" onclick="fecharModalDia()">FECHAR</button>
+            <h2 class="titulo-dia" id="modalTitulo"></h2>
+            <div id="listaObjetivos" style="flex-grow:1; overflow-y:auto; padding-bottom: 20px;"></div>
+            <button class="btn-acao" onclick="abrirModalAdd()">+ ADICIONAR</button>
+        </div>
+    </div>
+
+    <div class="modal modal-add" id="modalAdd">
+        <div class="form-balao">
+            <h3 style="margin-bottom:15px; color:var(--musgo-profundo); text-align:center">Nova Atividade</h3>
+            <select id="grupoAdd" onchange="atualizarSubAdd()">
+                <option value="Matemática">Matemática</option>
+                <option value="Ciências da Natureza">Ciências da Natureza</option>
+                <option value="Ciências Humanas">Ciências Humanas</option>
+                <option value="Linguagens">Linguagens</option>
+            </select>
+            <select id="subAdd" style="display:none"></select>
+            <input type="text" id="descAdd" placeholder="Descrição da tarefa...">
+            <select id="horaAdd"></select>
+            <button class="btn-acao" onclick="salvarObjetivo()">Salvar Atividade</button>
+            <button class="btn-acao" style="background:none; color:var(--texto-secundario); box-shadow:none" onclick="fecharModalAdd()">Voltar</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+        import { getDatabase, ref, set, onValue, update, remove } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAYMgssCKv7X3UhG_hGL-TW-qku2KqPQpc",
+            authDomain: "cronograma-9b7a8.firebaseapp.com",
+            databaseURL: "https://cronograma-9b7a8-default-rtdb.firebaseio.com",
+            projectId: "cronograma-9b7a8",
+            storageBucket: "cronograma-9b7a8.firebasestorage.app",
+            messagingSenderId: "469964086897",
+            appId: "1:469964086897:web:dfc80022b9f4fb108085d0",
+            measurementId: "G-E9Z0V1X1BC"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // --- Lógica do App ---
+        const cores = { "Matemática":"#1B4965", "Química":"#6A0572", "Física":"#015559", "Biologia":"#2D6A4F", "História":"#8F631B", "Geografia":"#5E3204", "Sociologia":"#E67E22", "Filosofia":"#C2B8A3", "Português":"#800020", "Inglês":"#0B1F3B", "Literatura / Arte":"#8E1458", "Redação":"#4A0504" };
+        const estrutura = { "Matemática":["Matemática"], "Ciências da Natureza":["Química","Física","Biologia"], "Ciências Humanas":["História","Geografia","Sociologia","Filosofia"], "Linguagens":["Português","Inglês","Literatura / Arte","Redação"] };
+        const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+        const diasSemana = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"];
+        
+        let mesAtual, semanaAtual, diaAtivoIdx = null;
+        let mesReal, semanaReal; 
+        let dbAtividades = {}; 
+
+        // Escuta o Firebase para atualizar os dados localmente sempre que houver mudança
+        const dbRef = ref(db, 'atividades');
+        onValue(dbRef, (snapshot) => {
+            const data = snapshot.val();
+            dbAtividades = data || {};
+            atualizarNav();
+            if (document.getElementById('modalDia').style.display === 'flex') {
+                renderizarObjetivos();
+            }
+        });
+
+        window.sincronizarDataAtual = function() {
+            const hoje = new Date();
+            mesReal = hoje.getMonth();
+            mesAtual = mesReal;
+            
+            const primeiroDiaMes = new Date(hoje.getFullYear(), mesAtual, 1);
+            let primeiroDiaUtil = new Date(primeiroDiaMes);
+            while(primeiroDiaUtil.getDay() !== 1) primeiroDiaUtil.setDate(primeiroDiaUtil.getDate() + 1);
+            
+            const diff = hoje.getTime() - primeiroDiaUtil.getTime();
+            const diasDecorridos = Math.floor(diff / (1000 * 60 * 60 * 24));
+            
+            semanaReal = diasDecorridos < 0 ? 1 : Math.floor(diasDecorridos / 7) + 1;
+            if(semanaReal > 4) semanaReal = 4;
+            semanaAtual = semanaReal;
+        }
+
+        function getDatasSemana(mes, sem) {
+            let d = new Date(2026, mes, 1);
+            while (d.getDay() !== 1) d.setDate(d.getDate() + 1);
+            d.setDate(d.getDate() + (sem - 1) * 7);
+            let fim = new Date(d); fim.setDate(d.getDate() + 6);
+            const fmt = (date) => date.getDate().toString().padStart(2,'0') + '/' + (date.getMonth()+1).toString().padStart(2,'0');
+            return {texto: `${fmt(d)} - ${fmt(fim)}`, inicio: d};
+        }
+
+        window.renderizarPaginaPrincipal = function() {
+            const container = document.getElementById('listaDias');
+            container.innerHTML = '';
+            const hoje = new Date();
+            const infoSemana = getDatasSemana(mesAtual, semanaAtual);
+
+            diasSemana.forEach((dia, idx) => {
+                const chave = `${mesAtual}-${semanaAtual}-${idx}`;
+                const tarefasObj = dbAtividades[chave] || {};
+                const tarefas = Object.values(tarefasObj);
+                
+                const dataCard = new Date(infoSemana.inicio);
+                dataCard.setDate(dataCard.getDate() + idx);
+                const eHoje = dataCard.getDate() === hoje.getDate() && dataCard.getMonth() === hoje.getMonth() && dataCard.getFullYear() === hoje.getFullYear();
+
+                let label = '';
+                if (tarefas.length > 0) {
+                    const restantes = tarefas.filter(t => !t.concluida).length;
+                    label = restantes === 0 ? `<span>Você concluiu todos os objetivos! 💪</span>` : `<span>${restantes.toString().padStart(2,'0')} objetivos restantes</span>`;
+                }
+                
+                const card = document.createElement('div');
+                card.className = `dia-card ${eHoje ? 'dia-atual' : ''}`;
+                card.onclick = () => abrirModalDia(idx);
+                card.innerHTML = `
+                    <div class="dia-info">
+                        <h3>${dia}</h3>
+                        ${label}
+                    </div>
+                    <div class="ver-btn">VER</div>`;
+                container.appendChild(card);
+            });
+        }
+
+        window.mudarMes = function(d) { 
+            mesAtual = (mesAtual + d + 12) % 12; 
+            if (mesAtual === mesReal) {
+                semanaAtual = semanaReal;
+            } else {
+                semanaAtual = 1;
+            }
+            atualizarNav(); 
+        }
+
+        window.mudarSemana = function(d) { 
+            semanaAtual = (semanaAtual + d - 1 + 4) % 4 + 1; 
+            atualizarNav(); 
+        }
+
+        window.atualizarNav = function() {
+            document.getElementById('nomeMes').innerText = meses[mesAtual];
+            document.getElementById('labelSemana').innerText = `Semana ${semanaAtual}: ${getDatasSemana(mesAtual, semanaAtual).texto}`;
+            renderizarPaginaPrincipal();
+        }
+
+        window.abrirModalDia = function(idx) {
+            diaAtivoIdx = idx;
+            document.getElementById('pagPrincipal').classList.add('ofuscado');
+            document.getElementById('modalDia').style.display = 'flex';
+            document.getElementById('modalTitulo').innerText = diasSemana[idx];
+            renderizarObjetivos();
+        }
+
+        window.fecharModalDia = function() {
+            document.getElementById('modalDia').style.display = 'none';
+            document.getElementById('pagPrincipal').classList.remove('ofuscado');
+            renderizarPaginaPrincipal();
+        }
+
+        window.renderizarObjetivos = function() {
+            const container = document.getElementById('listaObjetivos');
+            container.innerHTML = '';
+            const chave = `${mesAtual}-${semanaAtual}-${diaAtivoIdx}`;
+            const tarefasObj = dbAtividades[chave] || {};
+            
+            // Converter objeto do Firebase em array mantendo o ID da chave
+            let tarefas = Object.keys(tarefasObj).map(id => ({ id, ...tarefasObj[id] }));
+            tarefas.sort((a, b) => a.hora.localeCompare(b.hora));
+
+            const periodos = { 
+                "Manhã": tarefas.filter(t => t.hora >= "07:00" && t.hora <= "12:00"),
+                "Tarde": tarefas.filter(t => t.hora >= "12:30" && t.hora <= "17:30"),
+                "Noite": tarefas.filter(t => t.hora >= "18:00" && t.hora <= "20:30")
+            };
+
+            for (let p in periodos) {
+                if (periodos[p].length > 0) {
+                    container.innerHTML += `<div class="periodo-header">${p}</div>`;
+                    periodos[p].forEach((t) => {
+                        const item = document.createElement('div');
+                        item.className = `tarefa-card ${t.concluida ? 'concluida' : ''}`;
+                        item.style.borderLeftColor = cores[t.materia];
+                        item.innerHTML = `
+                            <div class="chk" onclick="toggleTarefa('${t.id}')"></div>
+                            <div class="tarefa-txt"><strong style="color:${cores[t.materia]}">${t.materia} • ${t.hora}</strong><span>${t.desc}</span></div>
+                            ${!t.concluida ? `<div class="btn-del" onclick="removerTarefa('${t.id}')">×</div>` : ''}
+                        `;
+                        container.appendChild(item);
+                    });
+                }
+            }
+        }
+
+        window.abrirModalAdd = function() {
+            document.getElementById('modalDia').classList.add('ofuscado');
+            document.getElementById('modalAdd').style.display = 'flex';
+            const chave = `${mesAtual}-${semanaAtual}-${diaAtivoIdx}`;
+            const tarefasObj = dbAtividades[chave] || {};
+            const tarefas = Object.values(tarefasObj);
+            
+            let proximoHorario = "07:00";
+            if (tarefas.length > 0) {
+                tarefas.sort((a, b) => a.hora.localeCompare(b.hora));
+                const ultimoHora = tarefas[tarefas.length - 1].hora;
+                let [h, m] = ultimoHora.split(':').map(Number);
+                m += 30; if (m >= 60) { h += 1; m = 0; }
+                if (h > 20) h = 20;
+                proximoHorario = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
+            }
+
+            document.getElementById('horaAdd').innerHTML = gerarHorarios(proximoHorario);
+            document.getElementById('descAdd').value = '';
+            atualizarSubAdd(); 
+        }
+
+        window.atualizarSubAdd = function() {
+            const grupo = document.getElementById('grupoAdd').value;
+            const sub = document.getElementById('subAdd');
+            if(grupo === "Matemática") { 
+                sub.style.display='none'; sub.innerHTML = '<option value="Matemática">Matemática</option>';
+            } else {
+                sub.style.display='block';
+                sub.innerHTML = estrutura[grupo].map(s => `<option value="${s}">${s}</option>`).join('');
+            }
+        }
+
+        window.salvarObjetivo = function() {
+            const mat = document.getElementById('grupoAdd').value === "Matemática" ? "Matemática" : document.getElementById('subAdd').value;
+            const desc = document.getElementById('descAdd').value;
+            const hora = document.getElementById('horaAdd').value;
+            if(!desc) return;
+            
+            const chave = `${mesAtual}-${semanaAtual}-${diaAtivoIdx}`;
+            const novaTarefaRef = ref(db, `atividades/${chave}/${Date.now()}`); // Usando timestamp como ID único
+            
+            set(novaTarefaRef, {
+                materia: mat,
+                desc: desc,
+                hora: hora,
+                concluida: false
+            }).then(() => {
+                fecharModalAdd();
+            });
+        }
+
+        window.fecharModalAdd = function() {
+            document.getElementById('modalAdd').style.display = 'none';
+            document.getElementById('modalDia').classList.remove('ofuscado');
+        }
+
+        window.toggleTarefa = function(id) {
+            const chave = `${mesAtual}-${semanaAtual}-${diaAtivoIdx}`;
+            const tarefaRef = ref(db, `atividades/${chave}/${id}`);
+            const estadoAtual = dbAtividades[chave][id].concluida;
+            update(tarefaRef, { concluida: !estadoAtual });
+        }
+
+        window.removerTarefa = function(id) {
+            const chave = `${mesAtual}-${semanaAtual}-${diaAtivoIdx}`;
+            const tarefaRef = ref(db, `atividades/${chave}/${id}`);
+            remove(tarefaRef);
+        }
+
+        function gerarHorarios(selecionado) {
+            let h = '';
+            for(let i=7; i<=20; i++) {
+                ["00", "30"].forEach(m => {
+                    let p = `${i.toString().padStart(2,'0')}:${m}`;
+                    let sel = p === selecionado ? 'selected' : '';
+                    h += `<option value="${p}" ${sel}>${p}</option>`;
+                });
+            }
+            return h;
+        }
+
+        sincronizarDataAtual();
+    </script>
+</body>
+</html>
