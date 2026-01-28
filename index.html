@@ -189,6 +189,7 @@
                 <option value="Vida">Vida</option>
             </select>
             <select id="subAdd" style="display:none"></select>
+            <input type="text" id="vidaAtividadeAdd" placeholder="Descrição da atividade... (obrigatório)" style="display:none">
             <input type="text" id="descAdd" placeholder="Descrição da tarefa... (opcional)">
             <div style="display: flex; gap: 10px;">
                 <select id="horaAdd" onchange="atualizarHoraFim()"></select>
@@ -240,14 +241,11 @@
             const hoje = new Date();
             mesReal = hoje.getMonth();
             mesAtual = mesReal;
-            
             const primeiroDiaMes = new Date(hoje.getFullYear(), mesAtual, 1);
             let primeiroDiaUtil = new Date(primeiroDiaMes);
             while(primeiroDiaUtil.getDay() !== 1) primeiroDiaUtil.setDate(primeiroDiaUtil.getDate() + 1);
-            
             const diff = hoje.getTime() - primeiroDiaUtil.getTime();
             const diasDecorridos = Math.floor(diff / (1000 * 60 * 60 * 24));
-            
             semanaReal = diasDecorridos < 0 ? 1 : Math.floor(diasDecorridos / 7) + 1;
             if(semanaReal > 4) semanaReal = 4;
             semanaAtual = semanaReal;
@@ -267,22 +265,18 @@
             container.innerHTML = '';
             const hoje = new Date();
             const infoSemana = getDatasSemana(mesAtual, semanaAtual);
-
             diasSemana.forEach((dia, idx) => {
                 const chave = `${mesAtual}-${semanaAtual}-${idx}`;
                 const tarefasObj = dbAtividades[chave] || {};
                 const tarefas = Object.values(tarefasObj);
-                
                 const dataCard = new Date(infoSemana.inicio);
                 dataCard.setDate(dataCard.getDate() + idx);
                 const eHoje = dataCard.getDate() === hoje.getDate() && dataCard.getMonth() === hoje.getMonth() && dataCard.getFullYear() === hoje.getFullYear();
-
                 let label = '';
                 if (tarefas.length > 0) {
                     const restantes = tarefas.filter(t => !t.concluida).length;
                     label = restantes === 0 ? `<span>Você concluiu todos os objetivos! 💪</span>` : `<span>${restantes.toString().padStart(2,'0')} objetivos restantes</span>`;
                 }
-                
                 const card = document.createElement('div');
                 card.className = `dia-card ${eHoje ? 'dia-atual' : ''}`;
                 card.onclick = () => abrirModalDia(idx);
@@ -298,11 +292,7 @@
 
         window.mudarMes = function(d) { 
             mesAtual = (mesAtual + d + 12) % 12; 
-            if (mesAtual === mesReal) {
-                semanaAtual = semanaReal;
-            } else {
-                semanaAtual = 1;
-            }
+            if (mesAtual === mesReal) { semanaAtual = semanaReal; } else { semanaAtual = 1; }
             atualizarNav(); 
         }
 
@@ -336,30 +326,26 @@
             container.innerHTML = '';
             const chave = `${mesAtual}-${semanaAtual}-${diaAtivoIdx}`;
             const tarefasObj = dbAtividades[chave] || {};
-            
             let tarefas = Object.keys(tarefasObj).map(id => ({ id, ...tarefasObj[id] }));
             tarefas.sort((a, b) => a.hora.localeCompare(b.hora));
-
             const periodos = { 
                 "Manhã": tarefas.filter(t => t.hora >= "07:00" && t.hora <= "12:00"),
                 "Tarde": tarefas.filter(t => t.hora >= "12:30" && t.hora <= "17:30"),
                 "Noite": tarefas.filter(t => t.hora >= "18:00" && t.hora <= "21:00")
             };
-
             for (let p in periodos) {
                 if (periodos[p].length > 0) {
                     container.innerHTML += `<div class="periodo-header">${p}</div>`;
                     periodos[p].forEach((t) => {
                         const item = document.createElement('div');
                         item.className = `tarefa-card ${t.concluida ? 'concluida' : ''}`;
-                        item.style.borderLeftColor = cores[t.materia];
+                        const corBorda = (t.materiaOriginal === "Vida") ? cores["Vida"] : cores[t.materia];
+                        item.style.borderLeftColor = corBorda;
                         const exibicaoHorario = t.horaFim ? `${t.hora} - ${t.horaFim}` : t.hora;
-                        
-                        // Estrutura mantida igual independente da existência de descrição ou conclusão
                         item.innerHTML = `
                             <div class="chk" onclick="toggleTarefa('${t.id}')"></div>
                             <div class="tarefa-txt">
-                                <strong style="color:${cores[t.materia]}">${t.materia} • ${exibicaoHorario}</strong>
+                                <strong style="color:${corBorda}">${t.materia} • ${exibicaoHorario}</strong>
                                 <span>${t.desc || ''}</span>
                             </div>
                             <div class="btn-del" onclick="removerTarefa('${t.id}')">×</div>
@@ -376,7 +362,6 @@
             const chave = `${mesAtual}-${semanaAtual}-${diaAtivoIdx}`;
             const tarefasObj = dbAtividades[chave] || {};
             const tarefas = Object.values(tarefasObj);
-            
             let proximoHorario = "07:00";
             if (tarefas.length > 0) {
                 tarefas.sort((a, b) => a.hora.localeCompare(b.hora));
@@ -386,10 +371,10 @@
                 if (h > 21) h = 21;
                 proximoHorario = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
             }
-
             document.getElementById('horaAdd').innerHTML = gerarHorarios(proximoHorario, "07:00", "21:00");
             atualizarHoraFim();
             document.getElementById('descAdd').value = '';
+            document.getElementById('vidaAtividadeAdd').value = '';
             atualizarSubAdd(); 
         }
 
@@ -404,39 +389,45 @@
         window.atualizarSubAdd = function() {
             const grupo = document.getElementById('grupoAdd').value;
             const sub = document.getElementById('subAdd');
-            const descInput = document.getElementById('descAdd');
+            const vidaInput = document.getElementById('vidaAtividadeAdd');
             
             if(grupo === "Vida") {
-                descInput.placeholder = "Descrição da atividade... (obrigatório)";
+                vidaInput.style.display = 'block';
+                sub.style.display = 'none';
             } else {
-                descInput.placeholder = "Descrição da tarefa... (opcional)";
-            }
-
-            if(grupo === "Matemática" || grupo === "Vida") { 
-                sub.style.display='none'; sub.innerHTML = `<option value="${grupo}">${grupo}</option>`;
-            } else {
-                sub.style.display='block';
-                sub.innerHTML = estrutura[grupo].map(s => `<option value="${s}">${s}</option>`).join('');
+                vidaInput.style.display = 'none';
+                if(grupo === "Matemática") { 
+                    sub.style.display='none'; 
+                    sub.innerHTML = `<option value="Matemática">Matemática</option>`;
+                } else {
+                    sub.style.display='block';
+                    sub.innerHTML = estrutura[grupo].map(s => `<option value="${s}">${s}</option>`).join('');
+                }
             }
         }
 
         window.salvarObjetivo = function() {
             const grupo = document.getElementById('grupoAdd').value;
-            const mat = (grupo === "Matemática" || grupo === "Vida") ? grupo : document.getElementById('subAdd').value;
+            let mat = "";
             const desc = document.getElementById('descAdd').value;
             const hora = document.getElementById('horaAdd').value;
             const horaFim = document.getElementById('horaFimAdd').value;
             
-            if(grupo === "Vida" && !desc) {
-                alert("Para a área Vida, a descrição é obrigatória.");
-                return;
+            if(grupo === "Vida") {
+                mat = document.getElementById('vidaAtividadeAdd').value;
+                if(!mat) {
+                    alert("Para a área Vida, a descrição da atividade é obrigatória.");
+                    return;
+                }
+            } else {
+                mat = (grupo === "Matemática") ? "Matemática" : document.getElementById('subAdd').value;
             }
             
             const chave = `${mesAtual}-${semanaAtual}-${diaAtivoIdx}`;
             const novaTarefaRef = ref(db, `atividades/${chave}/${Date.now()}`);
-            
             set(novaTarefaRef, {
                 materia: mat,
+                materiaOriginal: grupo,
                 desc: desc,
                 hora: hora,
                 horaFim: horaFim,
@@ -468,14 +459,11 @@
             let h = '';
             let [minH, minM] = min.split(':').map(Number);
             let [maxH, maxM] = max.split(':').map(Number);
-
             for(let i=7; i<=21; i++) {
                 ["00", "30"].forEach(m => {
                     let p = `${i.toString().padStart(2,'0')}:${m}`;
                     let [curH, curM] = [i, parseInt(m)];
-                    
-                    if ((curH > minH || (curH === minH && curM >= minM)) && 
-                        (curH < maxH || (curH === maxH && curM <= maxM))) {
+                    if ((curH > minH || (curH === minH && curM >= minM)) && (curH < maxH || (curH === maxH && curM <= maxM))) {
                         let sel = p === selecionado ? 'selected' : '';
                         h += `<option value="${p}" ${sel}>${p}</option>`;
                     }
