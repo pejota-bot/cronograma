@@ -121,12 +121,13 @@
         .tarefa-card { 
             display: flex; align-items: center; background: #fff; border: 1px solid #eee; 
             padding: 12px; border-radius: 14px; margin-bottom: 8px; border-left: 6px solid #ccc;
-            transition: transform 0.2s;
+            transition: transform 0.2s; min-height: 65px;
         }
         .chk { width: 22px; height: 22px; border: 2.5px solid var(--verde-oliva); border-radius: 7px; margin-right: 12px; cursor: pointer; flex-shrink: 0; position: relative; }
-        .tarefa-txt { flex-grow: 1; font-size: 0.82rem; }
+        .tarefa-txt { flex-grow: 1; font-size: 0.82rem; display: flex; flex-direction: column; justify-content: center; }
         .tarefa-txt strong { display: block; font-size: 0.7rem; text-transform: uppercase; margin-bottom: 2px; }
-        .btn-del { color: var(--terracota); font-weight: bold; cursor: pointer; padding: 5px; font-size: 1.2rem; transition: transform 0.2s; }
+        .tarefa-txt span { display: block; min-height: 1.1rem; }
+        .btn-del { color: var(--terracota); font-weight: bold; cursor: pointer; padding: 5px; font-size: 1.2rem; transition: transform 0.2s; flex-shrink: 0; margin-left: 10px; }
         .btn-del:hover { transform: scale(1.2); }
 
         .concluida { opacity: 0.5; filter: grayscale(0.5); }
@@ -185,10 +186,14 @@
                 <option value="Ciências da Natureza">Ciências da Natureza</option>
                 <option value="Ciências Humanas">Ciências Humanas</option>
                 <option value="Linguagens">Linguagens</option>
+                <option value="Vida">Vida</option>
             </select>
             <select id="subAdd" style="display:none"></select>
-            <input type="text" id="descAdd" placeholder="Descrição da tarefa...">
-            <select id="horaAdd"></select>
+            <input type="text" id="descAdd" placeholder="Descrição da tarefa... (opcional)">
+            <div style="display: flex; gap: 10px;">
+                <select id="horaAdd" onchange="atualizarHoraFim()"></select>
+                <select id="horaFimAdd"></select>
+            </div>
             <button class="btn-acao" onclick="salvarObjetivo()">Salvar Atividade</button>
             <button class="btn-acao" style="background:none; color:var(--texto-secundario); box-shadow:none" onclick="fecharModalAdd()">Voltar</button>
         </div>
@@ -212,9 +217,8 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // --- Lógica do App ---
-        const cores = { "Matemática":"#1B4965", "Química":"#6A0572", "Física":"#015559", "Biologia":"#2D6A4F", "História":"#8F631B", "Geografia":"#5E3204", "Sociologia":"#E67E22", "Filosofia":"#C2B8A3", "Português":"#800020", "Inglês":"#0B1F3B", "Literatura / Arte":"#8E1458", "Redação":"#4A0504" };
-        const estrutura = { "Matemática":["Matemática"], "Ciências da Natureza":["Química","Física","Biologia"], "Ciências Humanas":["História","Geografia","Sociologia","Filosofia"], "Linguagens":["Português","Inglês","Literatura / Arte","Redação"] };
+        const cores = { "Matemática":"#1B4965", "Química":"#6A0572", "Física":"#015559", "Biologia":"#2D6A4F", "História":"#8F631B", "Geografia":"#5E3204", "Sociologia":"#E67E22", "Filosofia":"#C2B8A3", "Português":"#800020", "Inglês":"#0B1F3B", "Literatura / Arte":"#8E1458", "Redação":"#4A0504", "Vida": "#629C88" };
+        const estrutura = { "Matemática":["Matemática"], "Ciências da Natureza":["Química","Física","Biologia"], "Ciências Humanas":["História","Geografia","Sociologia","Filosofia"], "Linguagens":["Português","Inglês","Literatura / Arte","Redação"], "Vida": ["Vida"] };
         const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
         const diasSemana = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"];
         
@@ -222,7 +226,6 @@
         let mesReal, semanaReal; 
         let dbAtividades = {}; 
 
-        // Escuta o Firebase para atualizar os dados localmente sempre que houver mudança
         const dbRef = ref(db, 'atividades');
         onValue(dbRef, (snapshot) => {
             const data = snapshot.val();
@@ -334,14 +337,13 @@
             const chave = `${mesAtual}-${semanaAtual}-${diaAtivoIdx}`;
             const tarefasObj = dbAtividades[chave] || {};
             
-            // Converter objeto do Firebase em array mantendo o ID da chave
             let tarefas = Object.keys(tarefasObj).map(id => ({ id, ...tarefasObj[id] }));
             tarefas.sort((a, b) => a.hora.localeCompare(b.hora));
 
             const periodos = { 
                 "Manhã": tarefas.filter(t => t.hora >= "07:00" && t.hora <= "12:00"),
                 "Tarde": tarefas.filter(t => t.hora >= "12:30" && t.hora <= "17:30"),
-                "Noite": tarefas.filter(t => t.hora >= "18:00" && t.hora <= "20:30")
+                "Noite": tarefas.filter(t => t.hora >= "18:00" && t.hora <= "21:00")
             };
 
             for (let p in periodos) {
@@ -351,10 +353,16 @@
                         const item = document.createElement('div');
                         item.className = `tarefa-card ${t.concluida ? 'concluida' : ''}`;
                         item.style.borderLeftColor = cores[t.materia];
+                        const exibicaoHorario = t.horaFim ? `${t.hora} - ${t.horaFim}` : t.hora;
+                        
+                        // Estrutura mantida igual independente da existência de descrição ou conclusão
                         item.innerHTML = `
                             <div class="chk" onclick="toggleTarefa('${t.id}')"></div>
-                            <div class="tarefa-txt"><strong style="color:${cores[t.materia]}">${t.materia} • ${t.hora}</strong><span>${t.desc}</span></div>
-                            ${!t.concluida ? `<div class="btn-del" onclick="removerTarefa('${t.id}')">×</div>` : ''}
+                            <div class="tarefa-txt">
+                                <strong style="color:${cores[t.materia]}">${t.materia} • ${exibicaoHorario}</strong>
+                                <span>${t.desc || ''}</span>
+                            </div>
+                            <div class="btn-del" onclick="removerTarefa('${t.id}')">×</div>
                         `;
                         container.appendChild(item);
                     });
@@ -375,20 +383,37 @@
                 const ultimoHora = tarefas[tarefas.length - 1].hora;
                 let [h, m] = ultimoHora.split(':').map(Number);
                 m += 30; if (m >= 60) { h += 1; m = 0; }
-                if (h > 20) h = 20;
+                if (h > 21) h = 21;
                 proximoHorario = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
             }
 
-            document.getElementById('horaAdd').innerHTML = gerarHorarios(proximoHorario);
+            document.getElementById('horaAdd').innerHTML = gerarHorarios(proximoHorario, "07:00", "21:00");
+            atualizarHoraFim();
             document.getElementById('descAdd').value = '';
             atualizarSubAdd(); 
+        }
+
+        window.atualizarHoraFim = function() {
+            const inicio = document.getElementById('horaAdd').value;
+            let [h, m] = inicio.split(':').map(Number);
+            m += 30; if (m >= 60) { h += 1; m = 0; }
+            const minFim = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
+            document.getElementById('horaFimAdd').innerHTML = gerarHorarios(minFim, minFim, "21:00");
         }
 
         window.atualizarSubAdd = function() {
             const grupo = document.getElementById('grupoAdd').value;
             const sub = document.getElementById('subAdd');
-            if(grupo === "Matemática") { 
-                sub.style.display='none'; sub.innerHTML = '<option value="Matemática">Matemática</option>';
+            const descInput = document.getElementById('descAdd');
+            
+            if(grupo === "Vida") {
+                descInput.placeholder = "Descrição da atividade... (obrigatório)";
+            } else {
+                descInput.placeholder = "Descrição da tarefa... (opcional)";
+            }
+
+            if(grupo === "Matemática" || grupo === "Vida") { 
+                sub.style.display='none'; sub.innerHTML = `<option value="${grupo}">${grupo}</option>`;
             } else {
                 sub.style.display='block';
                 sub.innerHTML = estrutura[grupo].map(s => `<option value="${s}">${s}</option>`).join('');
@@ -396,18 +421,25 @@
         }
 
         window.salvarObjetivo = function() {
-            const mat = document.getElementById('grupoAdd').value === "Matemática" ? "Matemática" : document.getElementById('subAdd').value;
+            const grupo = document.getElementById('grupoAdd').value;
+            const mat = (grupo === "Matemática" || grupo === "Vida") ? grupo : document.getElementById('subAdd').value;
             const desc = document.getElementById('descAdd').value;
             const hora = document.getElementById('horaAdd').value;
-            if(!desc) return;
+            const horaFim = document.getElementById('horaFimAdd').value;
+            
+            if(grupo === "Vida" && !desc) {
+                alert("Para a área Vida, a descrição é obrigatória.");
+                return;
+            }
             
             const chave = `${mesAtual}-${semanaAtual}-${diaAtivoIdx}`;
-            const novaTarefaRef = ref(db, `atividades/${chave}/${Date.now()}`); // Usando timestamp como ID único
+            const novaTarefaRef = ref(db, `atividades/${chave}/${Date.now()}`);
             
             set(novaTarefaRef, {
                 materia: mat,
                 desc: desc,
                 hora: hora,
+                horaFim: horaFim,
                 concluida: false
             }).then(() => {
                 fecharModalAdd();
@@ -432,13 +464,21 @@
             remove(tarefaRef);
         }
 
-        function gerarHorarios(selecionado) {
+        function gerarHorarios(selecionado, min, max) {
             let h = '';
-            for(let i=7; i<=20; i++) {
+            let [minH, minM] = min.split(':').map(Number);
+            let [maxH, maxM] = max.split(':').map(Number);
+
+            for(let i=7; i<=21; i++) {
                 ["00", "30"].forEach(m => {
                     let p = `${i.toString().padStart(2,'0')}:${m}`;
-                    let sel = p === selecionado ? 'selected' : '';
-                    h += `<option value="${p}" ${sel}>${p}</option>`;
+                    let [curH, curM] = [i, parseInt(m)];
+                    
+                    if ((curH > minH || (curH === minH && curM >= minM)) && 
+                        (curH < maxH || (curH === maxH && curM <= maxM))) {
+                        let sel = p === selecionado ? 'selected' : '';
+                        h += `<option value="${p}" ${sel}>${p}</option>`;
+                    }
                 });
             }
             return h;
